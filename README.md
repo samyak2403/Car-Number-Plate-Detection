@@ -98,6 +98,18 @@ Vehicle Type: Private Vehicle
 Number Plate Color: White
 ```
 
+
+## Screenshots
+
+**TV Channels** | **Live**
+:-------------------------:|:-------------------------:
+<img src="Image/1.png" width="250px"/>  |  <img src="Image/2.png" width="250px"/> 
+<img src="Image/3.png" width="250px"/>  |  <img src="4.png" width="250px"/>
+
+**TV Channels** | **Live**
+:-------------------------:|:-------------------------:
+ 
+
 ## 🤝 Contributing
 Contributions are welcome! Please fork the repository and submit a pull request. For major changes, please open an issue first to discuss what you would like to change. 🛠️
 
