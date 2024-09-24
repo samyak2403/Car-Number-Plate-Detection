@@ -33,6 +33,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 
    ```bash
    git clone https://github.com/samyak2403/CarNumberPlateDetection.git
+   ```
 
 # Live Car Number Detection
 
@@ -51,7 +52,7 @@ implementation 'com.google.mlkit:text-recognition:16.0.0'
 implementation 'androidx.camera:camera-core:1.0.0'
 implementation 'androidx.camera:camera-camera2:1.0.0'
 implementation 'androidx.camera:camera-lifecycle:1.0.0'
-```groovy
+```
 
 # LiveCarNumberDetection 🚗🔍
 
@@ -95,3 +96,19 @@ Number Plate: KA41 ER4547
 State: Karnataka
 Vehicle Type: Private Vehicle
 Number Plate Color: White
+```
+
+## 🤝 Contributing
+Contributions are welcome! Please fork the repository and submit a pull request. For major changes, please open an issue first to discuss what you would like to change. 🛠️
+
+## 📝 License
+This project is licensed under the MIT License. 📄
+
+## 📞 Contact
+For any inquiries or support, please contact [your-email@example.com](arrowwouldpro.com). 📧
+
+## 🙏 Acknowledgments
+- Google ML Kit Team for providing the powerful text recognition API.
+- Android Developers Community for their invaluable resources and support.
+- Open Source Contributors who have helped improve this project.
+
