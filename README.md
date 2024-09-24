@@ -102,11 +102,10 @@ Number Plate Color: White
 ## Screenshots
 
 
-:-------------------------:|:-------------------------:
-<img src="images/0.png" width="250px"/>  |  <img src="images/2.png" width="250px"/> 
-<img src="images/3.png" width="250px"/>  |  
 
-:-------------------------:|:-------------------------:
+<img src="images/0.png" width="250px"/>  |  <img src="images/2.png" width="250px"/> |<img src="images/3.png" width="250px"/> 
+ |  
+
  
 
 ## 🤝 Contributing
