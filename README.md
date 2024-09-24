@@ -101,12 +101,11 @@ Number Plate Color: White
 
 ## Screenshots
 
-**TV Channels** | **Live**
-:-------------------------:|:-------------------------:
-<img src="Image/1.png" width="250px"/>  |  <img src="Image/2.png" width="250px"/> 
-<img src="Image/3.png" width="250px"/>  |  <img src="4.png" width="250px"/>
 
-**TV Channels** | **Live**
+:-------------------------:|:-------------------------:
+<img src="images/0.png" width="250px"/>  |  <img src="images/1.png" width="250px"/> 
+<img src="images/2.png" width="250px"/>  |  <img src="images/3png" width="250px"/>
+
 :-------------------------:|:-------------------------:
  
 
