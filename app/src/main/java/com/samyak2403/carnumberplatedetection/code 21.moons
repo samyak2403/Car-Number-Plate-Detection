@@ -1,0 +1,1746 @@
+
+//code no 5
+//package com.samyak2403.carnumberplatedetection;
+//
+//import android.Manifest;
+//import android.content.pm.PackageManager;
+//import android.os.Bundle;
+//import android.util.Log;
+//import android.widget.TextView;
+//import android.widget.Toast;
+//
+//import androidx.annotation.NonNull;
+//import androidx.annotation.OptIn;
+//import androidx.appcompat.app.AppCompatActivity;
+//import androidx.camera.core.CameraSelector;
+//import androidx.camera.core.ExperimentalGetImage;
+//import androidx.camera.core.ImageAnalysis;
+//import androidx.camera.core.ImageProxy;
+//import androidx.camera.core.Preview;
+//import androidx.camera.lifecycle.ProcessCameraProvider;
+//import androidx.camera.view.PreviewView;
+//import androidx.core.app.ActivityCompat;
+//import androidx.core.content.ContextCompat;
+//
+//import com.google.common.util.concurrent.ListenableFuture;
+//import com.google.mlkit.vision.common.InputImage;
+//import com.google.mlkit.vision.text.Text;
+//import com.google.mlkit.vision.text.TextRecognition;
+//import com.google.mlkit.vision.text.TextRecognizer;
+//import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+//
+//import java.util.HashMap;
+//import java.util.Map;
+//import java.util.concurrent.ExecutionException;
+//import java.util.concurrent.ExecutorService;
+//import java.util.concurrent.Executors;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
+//
+//// Data class to store number plate info
+//class NumberPlateInfo {
+//    private String numberPlate;
+//    private String state;
+//    private String vehicleType;
+//    private String numberPlateColor;
+//
+//    public NumberPlateInfo(String numberPlate, String state, String vehicleType, String numberPlateColor) {
+//        this.numberPlate = numberPlate;
+//        this.state = state;
+//        this.vehicleType = vehicleType;
+//        this.numberPlateColor = numberPlateColor;
+//    }
+//
+//    @Override
+//    public String toString() {
+//        return "Number Plate: " + numberPlate +
+//                "\nState: " + state +
+//                "\nVehicle Type: " + vehicleType +
+//                "\nNumber Plate Color: " + numberPlateColor;
+//    }
+//}
+//
+//public class LiveCarNumberDetectionActivity extends AppCompatActivity {
+//
+//    private static final int CAMERA_PERMISSION_REQUEST = 1001;
+//    private PreviewView previewView;
+//    private TextView numberPlateTextView;
+//    private TextRecognizer textRecognizer;
+//    private boolean isProcessingFrame = false;
+//    private ExecutorService imageProcessingExecutor;
+//
+//    // Map for Indian states and UTs vehicle registration codes
+//    private static final Map<String, String> STATE_MAP = new HashMap<>();
+//    static {
+//        STATE_MAP.put("AP", "Andhra Pradesh");
+//        STATE_MAP.put("AR", "Arunachal Pradesh");
+//        STATE_MAP.put("AS", "Assam");
+//        STATE_MAP.put("BR", "Bihar");
+//        STATE_MAP.put("CG", "Chhattisgarh");
+//        STATE_MAP.put("GA", "Goa");
+//        STATE_MAP.put("GJ", "Gujarat");
+//        STATE_MAP.put("HR", "Haryana");
+//        STATE_MAP.put("HP", "Himachal Pradesh");
+//        STATE_MAP.put("JH", "Jharkhand");
+//        STATE_MAP.put("KA", "Karnataka");
+//        STATE_MAP.put("KL", "Kerala");
+//        STATE_MAP.put("MP", "Madhya Pradesh");
+//        STATE_MAP.put("MH", "Maharashtra");
+//        STATE_MAP.put("MN", "Manipur");
+//        STATE_MAP.put("ML", "Meghalaya");
+//        STATE_MAP.put("MZ", "Mizoram");
+//        STATE_MAP.put("NL", "Nagaland");
+//        STATE_MAP.put("OD", "Odisha");
+//        STATE_MAP.put("PB", "Punjab");
+//        STATE_MAP.put("RJ", "Rajasthan");
+//        STATE_MAP.put("SK", "Sikkim");
+//        STATE_MAP.put("TN", "Tamil Nadu");
+//        STATE_MAP.put("TG", "Telangana");
+//        STATE_MAP.put("TR", "Tripura");
+//        STATE_MAP.put("UP", "Uttar Pradesh");
+//        STATE_MAP.put("UK", "Uttarakhand");
+//        STATE_MAP.put("WB", "West Bengal");
+//        // Union Territories
+//        STATE_MAP.put("AN", "Andaman and Nicobar Islands");
+//        STATE_MAP.put("CH", "Chandigarh");
+//        STATE_MAP.put("DN", "Dadra and Nagar Haveli and Daman and Diu");
+//        STATE_MAP.put("DL", "Delhi");
+//        STATE_MAP.put("JK", "Jammu and Kashmir");
+//        STATE_MAP.put("LA", "Ladakh");
+//        STATE_MAP.put("LD", "Lakshadweep");
+//        STATE_MAP.put("PY", "Puducherry");
+//    }
+//
+//    @Override
+//    protected void onCreate(Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//        setContentView(R.layout.activity_live_car_number_detection);
+//
+//        previewView = findViewById(R.id.previewView);
+//        numberPlateTextView = findViewById(R.id.numberPlateTextView);
+//        textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+//
+//        imageProcessingExecutor = Executors.newFixedThreadPool(2);  // Multi-threading to handle image processing
+//
+//        // Check and request camera permission
+//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+//            startCamera();
+//        } else {
+//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
+//        }
+//    }
+//
+//    private void startCamera() {
+//        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+//        cameraProviderFuture.addListener(() -> {
+//            try {
+//                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+//
+//                // Set up the preview
+//                Preview preview = new Preview.Builder().build();
+//                preview.setSurfaceProvider(previewView.getSurfaceProvider());
+//
+//                // Select the back camera
+//                CameraSelector cameraSelector = new CameraSelector.Builder()
+//                        .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+//                        .build();
+//
+//                // Set up image analysis
+//                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+//                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+//                        .build();
+//
+//                imageAnalysis.setAnalyzer(imageProcessingExecutor, image -> {
+//                    if (!isProcessingFrame) {
+//                        isProcessingFrame = true;
+//                        processImage(image);
+//                    }
+//                });
+//
+//                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
+//
+//            } catch (ExecutionException | InterruptedException e) {
+//                Log.e("CameraX", "Error starting camera", e);
+//            }
+//        }, ContextCompat.getMainExecutor(this));
+//    }
+//
+//    @OptIn(markerClass = ExperimentalGetImage.class)
+//    private void processImage(ImageProxy image) {
+//        if (image == null || image.getImage() == null) {
+//            image.close();
+//            isProcessingFrame = false;
+//            return;
+//        }
+//
+//        // Image processing logic
+//        InputImage inputImage = InputImage.fromMediaImage(image.getImage(), image.getImageInfo().getRotationDegrees());
+//
+//        textRecognizer.process(inputImage)
+//                .addOnSuccessListener(visionText -> {
+//                    String detectedText = extractNumberPlateText(visionText);
+//                    if (!detectedText.isEmpty()) {
+//                        runOnUiThread(() -> numberPlateTextView.setText(detectedText));
+//                    }
+//                })
+//                .addOnFailureListener(e -> Log.e("MLKit", "Text recognition failed: " + e.getMessage()))
+//                .addOnCompleteListener(task -> {
+//                    image.close();
+//                    isProcessingFrame = false;
+//                });
+//    }
+//
+//    // Extraction logic for number plates, now accounting for bikes
+//    private String extractNumberPlateText(Text visionText) {
+//        StringBuilder numberPlateText = new StringBuilder();
+//        // Updated regex pattern for cars and bikes
+//        String regexPattern = "([A-Z]{2}\\d{1,2}\\s?[A-Z]{1,2}\\d{4})";
+//        Pattern pattern = Pattern.compile(regexPattern);
+//
+//        for (Text.TextBlock block : visionText.getTextBlocks()) {
+//            String blockText = block.getText();
+//            Matcher matcher = pattern.matcher(blockText);
+//            while (matcher.find()) {
+//                String numberPlate = matcher.group();
+//                NumberPlateInfo info = formatNumberPlateDetails(numberPlate);
+//                numberPlateText.append(info.toString()).append("\n\n");
+//            }
+//        }
+//        return numberPlateText.toString();
+//    }
+//
+//    // Format number plate details
+//    private NumberPlateInfo formatNumberPlateDetails(String numberPlate) {
+//        String stateCode = numberPlate.substring(0, 2);
+//        String state = null;
+//        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+//            state = STATE_MAP.getOrDefault(stateCode, "Unknown State");
+//        }
+//        String vehicleType = identifyVehicleType(numberPlate);
+//        String numberPlateColor = identifyNumberPlateColor(vehicleType);
+//
+//        return new NumberPlateInfo(numberPlate, state, vehicleType, numberPlateColor);
+//    }
+//
+////    private NumberPlateInfo formatNumberPlateDetails(String numberPlate) {
+////        String stateCode = numberPlate.substring(0, 2);
+////        String state = STATE_MAP.getOrDefault(stateCode, "Unknown State");
+////        String vehicleType = identifyVehicleType(numberPlate);
+////        String numberPlateColor = identifyNumberPlateColor(vehicleType);
+////
+////        return new NumberPlateInfo(numberPlate, state, vehicleType, numberPlateColor);
+////    }
+//
+//
+//    private String identifyVehicleType(String numberPlate) {
+//        // Detect vehicle type using patterns, length, and colors
+//        if (numberPlate.length() == 10) {
+//            return "Private Vehicle";
+//        } else if (numberPlate.length() == 9) {
+//            return "Commercial Vehicle";
+//        } else if (numberPlate.startsWith("DL") || numberPlate.startsWith("MH")) {
+//            return "Government Vehicle";
+//        } else if (numberPlate.startsWith("TS")) {
+//            return "Transport Vehicle";
+//        } else if (numberPlate.startsWith("GJ")) {
+//            return "Diplomatic Vehicle";
+//        } else if (numberPlate.length() == 8) {
+//            return "Bike";  // Typically shorter for bikes
+//        } else {
+//            return "Unknown Vehicle Type";
+//        }
+//    }
+//
+//    private String identifyNumberPlateColor(String vehicleType) {
+//        switch (vehicleType) {
+//            case "Private Vehicle":
+//                return "White";
+//            case "Commercial Vehicle":
+//                return "Yellow";
+//            case "Government Vehicle":
+//                return "Blue";
+//            case "Transport Vehicle":
+//                return "Black";
+//            case "Diplomatic Vehicle":
+//                return "Red";
+//            case "Bike":
+//                return "Black/White";
+//            default:
+//                return "Unknown";
+//        }
+//    }
+//
+//    @Override
+//    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+//        if (requestCode == CAMERA_PERMISSION_REQUEST && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//            startCamera();
+//        } else {
+//            Toast.makeText(this, "Camera permission denied", Toast.LENGTH_LONG).show();
+//        }
+//    }
+//
+//    @Override
+//    protected void onDestroy() {
+//        super.onDestroy();
+//        if (imageProcessingExecutor != null) {
+//            imageProcessingExecutor.shutdown();
+//        }
+//        if (textRecognizer != null) {
+//            textRecognizer.close();
+//        }
+//    }
+//}
+
+
+//code nl 3
+//package com.samyak2403.carnumberplatedetection;
+//
+//import android.Manifest;
+//import android.content.pm.PackageManager;
+//import android.os.Bundle;
+//import android.util.Log;
+//import android.widget.TextView;
+//import android.widget.Toast;
+//
+//import androidx.annotation.NonNull;
+//import androidx.annotation.OptIn;
+//import androidx.appcompat.app.AppCompatActivity;
+//import androidx.camera.core.CameraSelector;
+//import androidx.camera.core.ExperimentalGetImage;
+//import androidx.camera.core.ImageAnalysis;
+//import androidx.camera.core.ImageProxy;
+//import androidx.camera.core.Preview;
+//import androidx.camera.lifecycle.ProcessCameraProvider;
+//import androidx.camera.view.PreviewView;
+//import androidx.core.app.ActivityCompat;
+//import androidx.core.content.ContextCompat;
+//
+//import com.google.common.util.concurrent.ListenableFuture;
+//import com.google.mlkit.vision.common.InputImage;
+//import com.google.mlkit.vision.text.Text;
+//import com.google.mlkit.vision.text.TextRecognition;
+//import com.google.mlkit.vision.text.TextRecognizer;
+//import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+//
+//import java.util.HashMap;
+//import java.util.Map;
+//import java.util.concurrent.ExecutionException;
+//import java.util.concurrent.ExecutorService;
+//import java.util.concurrent.Executors;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
+//
+//// Data class to store number plate info
+//class NumberPlateInfo {
+//    private String numberPlate;
+//    private String state;
+//    private String vehicleType;
+//    private String numberPlateColor;
+//
+//    public NumberPlateInfo(String numberPlate, String state, String vehicleType, String numberPlateColor) {
+//        this.numberPlate = numberPlate;
+//        this.state = state;
+//        this.vehicleType = vehicleType;
+//        this.numberPlateColor = numberPlateColor;
+//    }
+//
+//    @Override
+//    public String toString() {
+//        return "Number Plate: " + numberPlate +
+//                "\nState: " + state +
+//                "\nVehicle Type: " + vehicleType +
+//                "\nNumber Plate Color: " + numberPlateColor;
+//    }
+//}
+//
+//public class LiveCarNumberDetectionActivity extends AppCompatActivity {
+//
+//    private static final int CAMERA_PERMISSION_REQUEST = 1001;
+//    private PreviewView previewView;
+//    private TextView numberPlateTextView;
+//    private TextRecognizer textRecognizer;
+//    private boolean isProcessingFrame = false;
+//    private ExecutorService imageProcessingExecutor;
+//
+//    // Map for Indian states and UTs vehicle registration codes
+//    private static final Map<String, String> STATE_MAP = new HashMap<>();
+//    static {
+//        STATE_MAP.put("AP", "Andhra Pradesh");
+//        STATE_MAP.put("AR", "Arunachal Pradesh");
+//        STATE_MAP.put("AS", "Assam");
+//        STATE_MAP.put("BR", "Bihar");
+//        STATE_MAP.put("CG", "Chhattisgarh");
+//        STATE_MAP.put("GA", "Goa");
+//        STATE_MAP.put("GJ", "Gujarat");
+//        STATE_MAP.put("HR", "Haryana");
+//        STATE_MAP.put("HP", "Himachal Pradesh");
+//        STATE_MAP.put("JH", "Jharkhand");
+//        STATE_MAP.put("KA", "Karnataka");
+//        STATE_MAP.put("KL", "Kerala");
+//        STATE_MAP.put("MP", "Madhya Pradesh");
+//        STATE_MAP.put("MH", "Maharashtra");
+//        STATE_MAP.put("MN", "Manipur");
+//        STATE_MAP.put("ML", "Meghalaya");
+//        STATE_MAP.put("MZ", "Mizoram");
+//        STATE_MAP.put("NL", "Nagaland");
+//        STATE_MAP.put("OD", "Odisha");
+//        STATE_MAP.put("PB", "Punjab");
+//        STATE_MAP.put("RJ", "Rajasthan");
+//        STATE_MAP.put("SK", "Sikkim");
+//        STATE_MAP.put("TN", "Tamil Nadu");
+//        STATE_MAP.put("TG", "Telangana");
+//        STATE_MAP.put("TR", "Tripura");
+//        STATE_MAP.put("UP", "Uttar Pradesh");
+//        STATE_MAP.put("UK", "Uttarakhand");
+//        STATE_MAP.put("WB", "West Bengal");
+//        // Union Territories
+//        STATE_MAP.put("AN", "Andaman and Nicobar Islands");
+//        STATE_MAP.put("CH", "Chandigarh");
+//        STATE_MAP.put("DN", "Dadra and Nagar Haveli and Daman and Diu");
+//        STATE_MAP.put("DL", "Delhi");
+//        STATE_MAP.put("JK", "Jammu and Kashmir");
+//        STATE_MAP.put("LA", "Ladakh");
+//        STATE_MAP.put("LD", "Lakshadweep");
+//        STATE_MAP.put("PY", "Puducherry");
+//    }
+//
+//    @Override
+//    protected void onCreate(Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//        setContentView(R.layout.activity_live_car_number_detection);
+//
+//        previewView = findViewById(R.id.previewView);
+//        numberPlateTextView = findViewById(R.id.numberPlateTextView);
+//        textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+//
+//        imageProcessingExecutor = Executors.newFixedThreadPool(2);  // Multi-threading to handle image processing
+//
+//        // Check and request camera permission
+//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+//            startCamera();
+//        } else {
+//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
+//        }
+//    }
+//
+//    private void startCamera() {
+//        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+//        cameraProviderFuture.addListener(() -> {
+//            try {
+//                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+//
+//                // Set up the preview
+//                Preview preview = new Preview.Builder().build();
+//                preview.setSurfaceProvider(previewView.getSurfaceProvider());
+//
+//                // Select the back camera
+//                CameraSelector cameraSelector = new CameraSelector.Builder()
+//                        .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+//                        .build();
+//
+//                // Set up image analysis
+//                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+//                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+//                        .build();
+//
+//                imageAnalysis.setAnalyzer(imageProcessingExecutor, image -> {
+//                    if (!isProcessingFrame) {
+//                        isProcessingFrame = true;
+//                        processImage(image);
+//                    }
+//                });
+//
+//                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
+//
+//            } catch (ExecutionException | InterruptedException e) {
+//                Log.e("CameraX", "Error starting camera", e);
+//            }
+//        }, ContextCompat.getMainExecutor(this));
+//    }
+//
+//    @OptIn(markerClass = ExperimentalGetImage.class)
+//    private void processImage(ImageProxy image) {
+//        if (image == null || image.getImage() == null) {
+//            image.close();
+//            isProcessingFrame = false;
+//            return;
+//        }
+//
+//        // Image processing logic
+//        InputImage inputImage = InputImage.fromMediaImage(image.getImage(), image.getImageInfo().getRotationDegrees());
+//
+//        textRecognizer.process(inputImage)
+//                .addOnSuccessListener(visionText -> {
+//                    String detectedText = extractNumberPlateText(visionText);
+//                    if (!detectedText.isEmpty()) {
+//                        runOnUiThread(() -> numberPlateTextView.setText(detectedText));
+//                    }
+//                })
+//                .addOnFailureListener(e -> Log.e("MLKit", "Text recognition failed: " + e.getMessage()))
+//                .addOnCompleteListener(task -> {
+//                    image.close();
+//                    isProcessingFrame = false;
+//                });
+//    }
+//
+//    // Extraction logic for number plates, now accounting for bikes
+//    private String extractNumberPlateText(Text visionText) {
+//        StringBuilder numberPlateText = new StringBuilder();
+//        // Updated regex pattern for cars and bikes
+//        String regexPattern = "([A-Z]{2}\\d{1,2}\\s?[A-Z]{1,2}\\d{4})";
+//        Pattern pattern = Pattern.compile(regexPattern);
+//
+//        for (Text.TextBlock block : visionText.getTextBlocks()) {
+//            String blockText = block.getText();
+//            Matcher matcher = pattern.matcher(blockText);
+//            while (matcher.find()) {
+//                String numberPlate = matcher.group();
+//                NumberPlateInfo info = formatNumberPlateDetails(numberPlate);
+//                numberPlateText.append(info.toString()).append("\n\n");
+//            }
+//        }
+//        return numberPlateText.toString();
+//    }
+//
+//    // Format number plate details
+//    private NumberPlateInfo formatNumberPlateDetails(String numberPlate) {
+//        String stateCode = numberPlate.substring(0, 2);
+//        String state = STATE_MAP.getOrDefault(stateCode, "Unknown State");
+//        String vehicleType = identifyVehicleType(numberPlate);
+//        String numberPlateColor = identifyNumberPlateColor(vehicleType);
+//
+//        return new NumberPlateInfo(numberPlate, state, vehicleType, numberPlateColor);
+//    }
+//
+//    private String identifyVehicleType(String numberPlate) {
+//        // Detect vehicle type using patterns, length, and colors
+//        if (numberPlate.length() == 10) {
+//            return "Private Vehicle";
+//        } else if (numberPlate.length() == 9) {
+//            return "Commercial Vehicle";
+//        } else if (numberPlate.startsWith("DL") || numberPlate.startsWith("MH")) {
+//            return "Government Vehicle";
+//        } else if (numberPlate.startsWith("TS")) {
+//            return "Transport Vehicle";
+//        } else if (numberPlate.startsWith("GJ")) {
+//            return "Diplomatic Vehicle";
+//        } else if (numberPlate.length() == 8) {
+//            return "Bike";  // Typically shorter for bikes
+//        } else {
+//            return "Unknown Vehicle Type";
+//        }
+//    }
+//
+//    private String identifyNumberPlateColor(String vehicleType) {
+//        switch (vehicleType) {
+//            case "Private Vehicle":
+//                return "White with Black Text";
+//            case "Commercial Vehicle":
+//                return "Yellow with Black Text";
+//            case "Government Vehicle":
+//                return "White with Red Text";
+//            case "Transport Vehicle":
+//                return "Green with White Text";
+//            case "Bike":
+//                return "White or Yellow";
+//            default:
+//                return "Unknown Color";
+//        }
+//    }
+//
+//    @Override
+//    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+//        if (requestCode == CAMERA_PERMISSION_REQUEST) {
+//            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//                startCamera();
+//            } else {
+//                Toast.makeText(this, "Camera permission is required to use the app", Toast.LENGTH_LONG).show();
+//            }
+//        }
+//    }
+//}
+
+//code nuber 2
+//package com.samyak2403.carnumberplatedetection;
+//
+//import android.Manifest;
+//import android.content.pm.PackageManager;
+//import android.os.Bundle;
+//import android.util.Log;
+//import android.widget.TextView;
+//import android.widget.Toast;
+//
+//import androidx.annotation.NonNull;
+//import androidx.annotation.OptIn;
+//import androidx.appcompat.app.AppCompatActivity;
+//import androidx.camera.core.CameraSelector;
+//import androidx.camera.core.ExperimentalGetImage;
+//import androidx.camera.core.ImageAnalysis;
+//import androidx.camera.core.ImageProxy;
+//import androidx.camera.core.Preview;
+//import androidx.camera.lifecycle.ProcessCameraProvider;
+//import androidx.camera.view.PreviewView;
+//import androidx.core.app.ActivityCompat;
+//import androidx.core.content.ContextCompat;
+//
+//import com.google.common.util.concurrent.ListenableFuture;
+//import com.google.mlkit.vision.common.InputImage;
+//import com.google.mlkit.vision.text.Text;
+//import com.google.mlkit.vision.text.TextRecognition;
+//import com.google.mlkit.vision.text.TextRecognizer;
+//import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+//
+//import java.util.HashMap;
+//import java.util.Map;
+//import java.util.concurrent.ExecutionException;
+//import java.util.concurrent.ExecutorService;
+//import java.util.concurrent.Executors;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
+//
+//public class LiveCarNumberDetectionActivity extends AppCompatActivity {
+//
+//    private static final int CAMERA_PERMISSION_REQUEST = 1001;
+//    private PreviewView previewView;
+//    private TextView numberPlateTextView;
+//    private TextRecognizer textRecognizer;
+//    private boolean isProcessingFrame = false;
+//    private ExecutorService imageProcessingExecutor;
+//
+//    // Map for Indian states and UTs vehicle registration codes
+//    private static final Map<String, String> STATE_MAP = new HashMap<>();
+//    static {
+//        STATE_MAP.put("AP", "Andhra Pradesh");
+//        STATE_MAP.put("AR", "Arunachal Pradesh");
+//        STATE_MAP.put("AS", "Assam");
+//        STATE_MAP.put("BR", "Bihar");
+//        STATE_MAP.put("CG", "Chhattisgarh");
+//        STATE_MAP.put("GA", "Goa");
+//        STATE_MAP.put("GJ", "Gujarat");
+//        STATE_MAP.put("HR", "Haryana");
+//        STATE_MAP.put("HP", "Himachal Pradesh");
+//        STATE_MAP.put("JH", "Jharkhand");
+//        STATE_MAP.put("KA", "Karnataka");
+//        STATE_MAP.put("KL", "Kerala");
+//        STATE_MAP.put("MP", "Madhya Pradesh");
+//        STATE_MAP.put("MH", "Maharashtra");
+//        STATE_MAP.put("MN", "Manipur");
+//        STATE_MAP.put("ML", "Meghalaya");
+//        STATE_MAP.put("MZ", "Mizoram");
+//        STATE_MAP.put("NL", "Nagaland");
+//        STATE_MAP.put("OD", "Odisha");
+//        STATE_MAP.put("PB", "Punjab");
+//        STATE_MAP.put("RJ", "Rajasthan");
+//        STATE_MAP.put("SK", "Sikkim");
+//        STATE_MAP.put("TN", "Tamil Nadu");
+//        STATE_MAP.put("TG", "Telangana");
+//        STATE_MAP.put("TR", "Tripura");
+//        STATE_MAP.put("UP", "Uttar Pradesh");
+//        STATE_MAP.put("UK", "Uttarakhand");
+//        STATE_MAP.put("WB", "West Bengal");
+//        // Union Territories
+//        STATE_MAP.put("AN", "Andaman and Nicobar Islands");
+//        STATE_MAP.put("CH", "Chandigarh");
+//        STATE_MAP.put("DN", "Dadra and Nagar Haveli and Daman and Diu");
+//        STATE_MAP.put("DL", "Delhi");
+//        STATE_MAP.put("JK", "Jammu and Kashmir");
+//        STATE_MAP.put("LA", "Ladakh");
+//        STATE_MAP.put("LD", "Lakshadweep");
+//        STATE_MAP.put("PY", "Puducherry");
+//    }
+//
+//    @Override
+//    protected void onCreate(Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//        setContentView(R.layout.activity_live_car_number_detection);
+//
+//        previewView = findViewById(R.id.previewView);
+//        numberPlateTextView = findViewById(R.id.numberPlateTextView);
+//        textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+//
+//        imageProcessingExecutor = Executors.newFixedThreadPool(2);  // Multi-threading to handle image processing
+//
+//        // Check and request camera permission
+//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+//            startCamera();
+//        } else {
+//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
+//        }
+//    }
+//
+//    private void startCamera() {
+//        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+//        cameraProviderFuture.addListener(() -> {
+//            try {
+//                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+//
+//                // Set up the preview
+//                Preview preview = new Preview.Builder().build();
+//                preview.setSurfaceProvider(previewView.getSurfaceProvider());
+//
+//                // Select the back camera
+//                CameraSelector cameraSelector = new CameraSelector.Builder()
+//                        .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+//                        .build();
+//
+//                // Set up image analysis
+//                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+//                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+//                        .build();
+//
+//                imageAnalysis.setAnalyzer(imageProcessingExecutor, image -> {
+//                    if (!isProcessingFrame) {
+//                        isProcessingFrame = true;
+//                        processImage(image);
+//                    }
+//                });
+//
+//                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
+//
+//            } catch (ExecutionException | InterruptedException e) {
+//                Log.e("CameraX", "Error starting camera", e);
+//            }
+//        }, ContextCompat.getMainExecutor(this));
+//    }
+//
+//    @OptIn(markerClass = ExperimentalGetImage.class)
+//    private void processImage(ImageProxy image) {
+//        if (image == null || image.getImage() == null) {
+//            image.close();
+//            isProcessingFrame = false;
+//            return;
+//        }
+//
+//        // Image processing logic with Percat and contrast enhancement
+//        InputImage inputImage = InputImage.fromMediaImage(image.getImage(), image.getImageInfo().getRotationDegrees());
+//
+//        textRecognizer.process(inputImage)
+//                .addOnSuccessListener(visionText -> {
+//                    String detectedText = extractNumberPlateText(visionText);
+//                    if (!detectedText.isEmpty()) {
+//                        runOnUiThread(() -> numberPlateTextView.setText(detectedText));
+//                    }
+//                })
+//                .addOnFailureListener(e -> Log.e("MLKit", "Text recognition failed: " + e.getMessage()))
+//                .addOnCompleteListener(task -> {
+//                    image.close();
+//                    isProcessingFrame = false;
+//                });
+//    }
+//
+//    // Enhanced extraction logic for number plates with Percat logic
+//    private String extractNumberPlateText(Text visionText) {
+//        StringBuilder numberPlateText = new StringBuilder();
+//        String regexPattern = "([A-Z]{2}\\d{1,2}\\s?[A-Z]{1,2}\\d{4})";
+//        Pattern pattern = Pattern.compile(regexPattern);
+//
+//        for (Text.TextBlock block : visionText.getTextBlocks()) {
+//            String blockText = block.getText();
+//            Matcher matcher = pattern.matcher(blockText);
+//            while (matcher.find()) {
+//                String numberPlate = matcher.group();
+//                numberPlateText.append(formatNumberPlateDetails(numberPlate)).append("\n\n");
+//            }
+//        }
+//        return numberPlateText.toString();
+//    }
+//
+//    // Improved vehicle type and color identification logic
+//    private String formatNumberPlateDetails(String numberPlate) {
+//        String stateCode = numberPlate.substring(0, 2);
+//        String state = STATE_MAP.getOrDefault(stateCode, "Unknown State");
+//        String vehicleType = identifyVehicleType(numberPlate);
+//        String numberPlateColor = identifyNumberPlateColor(vehicleType);
+//
+//        return "Number Plate: " + numberPlate +
+//                "\nState: " + state +
+//                "\nVehicle Type: " + vehicleType +
+//                "\nNumber Plate Color: " + numberPlateColor;
+//    }
+//
+//    private String identifyVehicleType(String numberPlate) {
+//        // Detect vehicle type using Percat logic (patterns, length, and colors)
+//        if (numberPlate.length() == 10) {
+//            return "Private Vehicle";
+//        } else if (numberPlate.length() == 9) {
+//            return "Commercial Vehicle";
+//        } else if (numberPlate.startsWith("DL") || numberPlate.startsWith("MH")) {
+//            return "Government Vehicle";
+//        } else if (numberPlate.startsWith("TS")) {
+//            return "Transport Vehicle";
+//        } else if (numberPlate.startsWith("GJ")) {
+//            return "Diplomatic Vehicle";
+//        } else {
+//            return "Unknown Vehicle Type";
+//        }
+//    }
+//
+//    private String identifyNumberPlateColor(String vehicleType) {
+//        switch (vehicleType) {
+//            case "Private Vehicle":
+//                return "White (Private)";
+//            case "Commercial Vehicle":
+//                return "Yellow (Commercial)";
+//            case "Government Vehicle":
+//                return "Blue (Government)";
+//            case "Transport Vehicle":
+//                return "Green (Transport)";
+//            case "Diplomatic Vehicle":
+//                return "Red (Diplomatic)";
+//            default:
+//                return "Unknown Color";
+//        }
+//    }
+//
+//    @Override
+//    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+//        if (requestCode == CAMERA_PERMISSION_REQUEST) {
+//            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//                startCamera();
+//            } else {
+//                Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
+//            }
+//        }
+//    }
+//
+//    @Override
+//    protected void onDestroy() {
+//        super.onDestroy();
+//        if (imageProcessingExecutor != null) {
+//            imageProcessingExecutor.shutdown();
+//        }
+//    }
+//}
+
+
+//package com.samyak2403.carnumberplatedetection;
+//
+//import android.Manifest;
+//import android.content.pm.PackageManager;
+//import android.os.Bundle;
+//import android.util.Log;
+//import android.widget.TextView;
+//import android.widget.Toast;
+//
+//import androidx.annotation.NonNull;
+//import androidx.annotation.OptIn;
+//import androidx.appcompat.app.AppCompatActivity;
+//import androidx.camera.core.CameraSelector;
+//import androidx.camera.core.ExperimentalGetImage;
+//import androidx.camera.core.ImageAnalysis;
+//import androidx.camera.core.ImageProxy;
+//import androidx.camera.core.Preview;
+//import androidx.camera.lifecycle.ProcessCameraProvider;
+//import androidx.camera.view.PreviewView;
+//import androidx.core.app.ActivityCompat;
+//import androidx.core.content.ContextCompat;
+//
+//import com.google.common.util.concurrent.ListenableFuture;
+//import com.google.mlkit.vision.common.InputImage;
+//import com.google.mlkit.vision.text.Text;
+//import com.google.mlkit.vision.text.TextRecognition;
+//import com.google.mlkit.vision.text.TextRecognizer;
+//import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+//
+//import java.util.HashMap;
+//import java.util.Map;
+//import java.util.concurrent.ExecutionException;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
+//
+//public class LiveCarNumberDetectionActivity extends AppCompatActivity {
+//
+//    private static final int CAMERA_PERMISSION_REQUEST = 1001;
+//    private PreviewView previewView;
+//    private TextView numberPlateTextView;
+//    private TextRecognizer textRecognizer;
+//    private boolean isProcessingFrame = false;
+//
+//    // Map for Indian states and UTs vehicle registration codes
+//    private static final Map<String, String> STATE_MAP = new HashMap<>();
+//    static {
+//        // Populate with Indian state codes
+//        STATE_MAP.put("AP", "Andhra Pradesh");
+//        STATE_MAP.put("AR", "Arunachal Pradesh");
+//        STATE_MAP.put("AS", "Assam");
+//        STATE_MAP.put("BR", "Bihar");
+//        STATE_MAP.put("CG", "Chhattisgarh");
+//        STATE_MAP.put("GA", "Goa");
+//        STATE_MAP.put("GJ", "Gujarat");
+//        STATE_MAP.put("HR", "Haryana");
+//        STATE_MAP.put("HP", "Himachal Pradesh");
+//        STATE_MAP.put("JH", "Jharkhand");
+//        STATE_MAP.put("KA", "Karnataka");
+//        STATE_MAP.put("KL", "Kerala");
+//        STATE_MAP.put("MP", "Madhya Pradesh");
+//        STATE_MAP.put("MH", "Maharashtra");
+//        STATE_MAP.put("MN", "Manipur");
+//        STATE_MAP.put("ML", "Meghalaya");
+//        STATE_MAP.put("MZ", "Mizoram");
+//        STATE_MAP.put("NL", "Nagaland");
+//        STATE_MAP.put("OD", "Odisha");
+//        STATE_MAP.put("PB", "Punjab");
+//        STATE_MAP.put("RJ", "Rajasthan");
+//        STATE_MAP.put("SK", "Sikkim");
+//        STATE_MAP.put("TN", "Tamil Nadu");
+//        STATE_MAP.put("TG", "Telangana");
+//        STATE_MAP.put("TR", "Tripura");
+//        STATE_MAP.put("UP", "Uttar Pradesh");
+//        STATE_MAP.put("UK", "Uttarakhand");
+//        STATE_MAP.put("WB", "West Bengal");
+//        // Union Territories
+//        STATE_MAP.put("AN", "Andaman and Nicobar Islands");
+//        STATE_MAP.put("CH", "Chandigarh");
+//        STATE_MAP.put("DN", "Dadra and Nagar Haveli and Daman and Diu");
+//        STATE_MAP.put("DL", "Delhi");
+//        STATE_MAP.put("JK", "Jammu and Kashmir");
+//        STATE_MAP.put("LA", "Ladakh");
+//        STATE_MAP.put("LD", "Lakshadweep");
+//        STATE_MAP.put("PY", "Puducherry");
+//    }
+//
+//    @Override
+//    protected void onCreate(Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//        setContentView(R.layout.activity_live_car_number_detection);
+//
+//        previewView = findViewById(R.id.previewView);
+//        numberPlateTextView = findViewById(R.id.numberPlateTextView);
+//        textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+//
+//        // Check and request camera permission
+//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+//            startCamera();
+//        } else {
+//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
+//        }
+//    }
+//
+//    private void startCamera() {
+//        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+//        cameraProviderFuture.addListener(() -> {
+//            try {
+//                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+//
+//                // Set up the preview
+//                Preview preview = new Preview.Builder().build();
+//                preview.setSurfaceProvider(previewView.getSurfaceProvider());
+//
+//                // Select the back camera
+//                CameraSelector cameraSelector = new CameraSelector.Builder()
+//                        .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+//                        .build();
+//
+//                // Set up image analysis
+//                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+//                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+//                        .build();
+//
+//                imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), image -> {
+//                    if (!isProcessingFrame) {
+//                        isProcessingFrame = true;
+//                        processImage(image);
+//                    }
+//                });
+//
+//                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
+//
+//            } catch (ExecutionException | InterruptedException e) {
+//                Log.e("CameraX", "Error starting camera", e);
+//            }
+//        }, ContextCompat.getMainExecutor(this));
+//    }
+//
+//    @OptIn(markerClass = ExperimentalGetImage.class)
+//    private void processImage(ImageProxy image) {
+//        if (image == null || image.getImage() == null) {
+//            image.close();
+//            isProcessingFrame = false;
+//            return;
+//        }
+//
+//        InputImage inputImage = InputImage.fromMediaImage(image.getImage(), image.getImageInfo().getRotationDegrees());
+//
+//        textRecognizer.process(inputImage)
+//                .addOnSuccessListener(visionText -> {
+//                    String detectedText = extractNumberPlateText(visionText);
+//                    if (!detectedText.isEmpty()) {
+//                        numberPlateTextView.setText(detectedText);
+//                    }
+//                })
+//                .addOnFailureListener(e -> Log.e("MLKit", "Text recognition failed: " + e.getMessage()))
+//                .addOnCompleteListener(task -> {
+//                    image.close();
+//                    isProcessingFrame = false;
+//                });
+//    }
+//
+//    private String extractNumberPlateText(Text visionText) {
+//        StringBuilder numberPlateText = new StringBuilder();
+//        // Updated regex to match the pattern in the image
+//        String regexPattern = "([A-Z]{2}\\d{1,2}\\s?[A-Z]{1,2}\\d{4})";
+//        Pattern pattern = Pattern.compile(regexPattern);
+//
+//        for (Text.TextBlock block : visionText.getTextBlocks()) {
+//            String blockText = block.getText();
+//            Matcher matcher = pattern.matcher(blockText);
+//            while (matcher.find()) {
+//                String numberPlate = matcher.group();
+//                numberPlateText.append(formatNumberPlateDetails(numberPlate)).append("\n\n");
+//            }
+//        }
+//        return numberPlateText.toString();
+//    }
+//
+//    private String formatNumberPlateDetails(String numberPlate) {
+//        String stateCode = numberPlate.substring(0, 2);
+//        String state = STATE_MAP.getOrDefault(stateCode, "Unknown State");
+//        String vehicleType = identifyVehicleType(numberPlate);
+//        String numberPlateColor = identifyNumberPlateColor(vehicleType);
+//
+//        return "Number Plate: " + numberPlate +
+//                "\nState: " + state +
+//                "\nVehicle Type: " + vehicleType +
+//                "\nNumber Plate Color: " + numberPlateColor;
+//    }
+//
+//    private String identifyVehicleType(String numberPlate) {
+//        // Number plate type logic based on color, starting patterns, or length
+//        if (numberPlate.length() == 10) {
+//            return "Private Vehicle";
+//        } else if (numberPlate.length() == 9) {
+//            return "Commercial Vehicle";
+//        } else if (numberPlate.startsWith("DL") || numberPlate.startsWith("MH")) {
+//            return "Government Vehicle";
+//        } else if (numberPlate.startsWith("TS")) {
+//            return "Transport Vehicle";
+//        } else if (numberPlate.startsWith("GJ")) {
+//            return "Diplomatic Vehicle";
+//        } else {
+//            return "Unknown Vehicle Type";
+//        }
+//    }
+//
+//    private String identifyNumberPlateColor(String vehicleType) {
+//        switch (vehicleType) {
+//            case "Private Vehicle":
+//                return "White (Private)";
+//            case "Commercial Vehicle":
+//                return "Yellow (Commercial)";
+//            case "Government Vehicle":
+//                return "Blue (Government)";
+//            case "Transport Vehicle":
+//                return "Green (Transport)";
+//            case "Diplomatic Vehicle":
+//                return "Red (Diplomatic)";
+//            default:
+//                return "Unknown Color";
+//        }
+//    }
+//
+//    @Override
+//    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+//        if (requestCode == CAMERA_PERMISSION_REQUEST) {
+//            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//                startCamera();
+//            } else {
+//                Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
+//            }
+//        }
+//    }
+//}
+
+
+//package com.samyak2403.carnumberplatedetection;
+//
+//import android.Manifest;
+//import android.content.pm.PackageManager;
+//import android.os.Bundle;
+//import android.util.Log;
+//import android.widget.TextView;
+//import android.widget.Toast;
+//
+//import androidx.annotation.NonNull;
+//import androidx.annotation.OptIn;
+//import androidx.appcompat.app.AppCompatActivity;
+//import androidx.camera.core.CameraSelector;
+//import androidx.camera.core.ExperimentalGetImage;
+//import androidx.camera.core.ImageAnalysis;
+//import androidx.camera.core.ImageProxy;
+//import androidx.camera.core.Preview;
+//import androidx.camera.lifecycle.ProcessCameraProvider;
+//import androidx.camera.view.PreviewView;
+//import androidx.core.app.ActivityCompat;
+//import androidx.core.content.ContextCompat;
+//
+//import com.google.common.util.concurrent.ListenableFuture;
+//import com.google.mlkit.vision.common.InputImage;
+//import com.google.mlkit.vision.text.Text;
+//import com.google.mlkit.vision.text.TextRecognition;
+//import com.google.mlkit.vision.text.TextRecognizer;
+//import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+//
+//import java.util.HashMap;
+//import java.util.Map;
+//import java.util.concurrent.ExecutionException;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
+//
+//public class LiveCarNumberDetectionActivity extends AppCompatActivity {
+//
+//    private static final int CAMERA_PERMISSION_REQUEST = 1001;
+//    private PreviewView previewView;
+//    private TextView numberPlateTextView;
+//    private TextRecognizer textRecognizer;
+//    private boolean isProcessingFrame = false;
+//
+//    // Map for Indian states and UTs vehicle registration codes
+//    private static final Map<String, String> STATE_MAP = new HashMap<>();
+//    static {
+//        // Populate with Indian state codes
+//        STATE_MAP.put("AP", "Andhra Pradesh");
+//        STATE_MAP.put("AR", "Arunachal Pradesh");
+//        STATE_MAP.put("AS", "Assam");
+//        STATE_MAP.put("BR", "Bihar");
+//        STATE_MAP.put("CG", "Chhattisgarh");
+//        STATE_MAP.put("GA", "Goa");
+//        STATE_MAP.put("GJ", "Gujarat");
+//        STATE_MAP.put("HR", "Haryana");
+//        STATE_MAP.put("HP", "Himachal Pradesh");
+//        STATE_MAP.put("JH", "Jharkhand");
+//        STATE_MAP.put("KA", "Karnataka");
+//        STATE_MAP.put("KL", "Kerala");
+//        STATE_MAP.put("MP", "Madhya Pradesh");
+//        STATE_MAP.put("MH", "Maharashtra");
+//        STATE_MAP.put("MN", "Manipur");
+//        STATE_MAP.put("ML", "Meghalaya");
+//        STATE_MAP.put("MZ", "Mizoram");
+//        STATE_MAP.put("NL", "Nagaland");
+//        STATE_MAP.put("OD", "Odisha");
+//        STATE_MAP.put("PB", "Punjab");
+//        STATE_MAP.put("RJ", "Rajasthan");
+//        STATE_MAP.put("SK", "Sikkim");
+//        STATE_MAP.put("TN", "Tamil Nadu");
+//        STATE_MAP.put("TG", "Telangana");
+//        STATE_MAP.put("TR", "Tripura");
+//        STATE_MAP.put("UP", "Uttar Pradesh");
+//        STATE_MAP.put("UK", "Uttarakhand");
+//        STATE_MAP.put("WB", "West Bengal");
+//        // Union Territories
+//        STATE_MAP.put("AN", "Andaman and Nicobar Islands");
+//        STATE_MAP.put("CH", "Chandigarh");
+//        STATE_MAP.put("DN", "Dadra and Nagar Haveli and Daman and Diu");
+//        STATE_MAP.put("DL", "Delhi");
+//        STATE_MAP.put("JK", "Jammu and Kashmir");
+//        STATE_MAP.put("LA", "Ladakh");
+//        STATE_MAP.put("LD", "Lakshadweep");
+//        STATE_MAP.put("PY", "Puducherry");
+//    }
+//
+//    @Override
+//    protected void onCreate(Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//        setContentView(R.layout.activity_live_car_number_detection);
+//
+//        previewView = findViewById(R.id.previewView);
+//        numberPlateTextView = findViewById(R.id.numberPlateTextView);
+//        textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+//
+//        // Check and request camera permission
+//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+//            startCamera();
+//        } else {
+//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
+//        }
+//    }
+//
+//    private void startCamera() {
+//        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+//        cameraProviderFuture.addListener(() -> {
+//            try {
+//                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+//
+//                // Set up the preview
+//                Preview preview = new Preview.Builder().build();
+//                preview.setSurfaceProvider(previewView.getSurfaceProvider());
+//
+//                // Select the back camera
+//                CameraSelector cameraSelector = new CameraSelector.Builder()
+//                        .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+//                        .build();
+//
+//                // Set up image analysis
+//                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+//                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+//                        .build();
+//
+//                imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), image -> {
+//                    if (!isProcessingFrame) {
+//                        isProcessingFrame = true;
+//                        processImage(image);
+//                    }
+//                });
+//
+//                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
+//
+//            } catch (ExecutionException | InterruptedException e) {
+//                Log.e("CameraX", "Error starting camera", e);
+//            }
+//        }, ContextCompat.getMainExecutor(this));
+//    }
+//
+//    @OptIn(markerClass = ExperimentalGetImage.class)
+//    private void processImage(ImageProxy image) {
+//        if (image == null || image.getImage() == null) {
+//            image.close();
+//            isProcessingFrame = false;
+//            return;
+//        }
+//
+//        InputImage inputImage = InputImage.fromMediaImage(image.getImage(), image.getImageInfo().getRotationDegrees());
+//
+//        textRecognizer.process(inputImage)
+//                .addOnSuccessListener(visionText -> {
+//                    String detectedText = extractNumberPlateText(visionText);
+//                    if (!detectedText.isEmpty()) {
+//                        numberPlateTextView.setText(detectedText);
+//                    }
+//                })
+//                .addOnFailureListener(e -> Log.e("MLKit", "Text recognition failed: " + e.getMessage()))
+//                .addOnCompleteListener(task -> {
+//                    image.close();
+//                    isProcessingFrame = false;
+//                });
+//    }
+//
+//    private String extractNumberPlateText(Text visionText) {
+//        StringBuilder numberPlateText = new StringBuilder();
+//        // Updated regex to match the pattern in the image
+//        String regexPattern = "([A-Z]{2}\\d{1,2}\\s?[A-Z]{1,2}\\d{4})";
+//        Pattern pattern = Pattern.compile(regexPattern);
+//
+//        for (Text.TextBlock block : visionText.getTextBlocks()) {
+//            String blockText = block.getText();
+//            Matcher matcher = pattern.matcher(blockText);
+//            while (matcher.find()) {
+//                String numberPlate = matcher.group();
+//                numberPlateText.append(formatNumberPlateDetails(numberPlate)).append("\n\n");
+//            }
+//        }
+//        return numberPlateText.toString();
+//    }
+//
+//    private String formatNumberPlateDetails(String numberPlate) {
+//        String stateCode = numberPlate.substring(0, 2);
+//        String state = STATE_MAP.getOrDefault(stateCode, "Unknown State");
+//        String vehicleType = identifyVehicleType(numberPlate);
+//        String numberPlateColor = identifyNumberPlateColor(vehicleType);
+//
+//        return "Number Plate: " + numberPlate +
+//                "\nState: " + state +
+//                "\nVehicle Type: " + vehicleType +
+//                "\nNumber Plate Color: " + numberPlateColor;
+//    }
+//
+//    private String identifyVehicleType(String numberPlate) {
+//        // Assuming length-based logic for distinguishing vehicle types
+//        if (numberPlate.length() == 10) {
+//            return "Private Vehicle";
+//        } else if (numberPlate.length() == 9) {
+//            return "Commercial Vehicle";
+//        }
+//        return "Unknown Vehicle Type";
+//    }
+//
+//    private String identifyNumberPlateColor(String vehicleType) {
+//        switch (vehicleType) {
+//            case "Private Vehicle":
+//                return "White (Private)";
+//            case "Commercial Vehicle":
+//                return "Yellow (Commercial)";
+//            default:
+//                return "Unknown Color";
+//        }
+//    }
+//
+//    @Override
+//    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+//        if (requestCode == CAMERA_PERMISSION_REQUEST) {
+//            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//                startCamera();
+//            } else {
+//                Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
+//            }
+//        }
+//    }
+//}
+
+
+//old version for 2
+//package com.samyak2403.carnumberplatedetection;
+//
+//import android.Manifest;
+//import android.content.pm.PackageManager;
+//import android.os.Bundle;
+//import android.util.Log;
+//import android.widget.TextView;
+//import android.widget.Toast;
+//
+//import androidx.annotation.NonNull;
+//import androidx.annotation.OptIn;
+//import androidx.appcompat.app.AppCompatActivity;
+//import androidx.camera.core.CameraSelector;
+//import androidx.camera.core.ExperimentalGetImage;
+//import androidx.camera.core.ImageAnalysis;
+//import androidx.camera.core.ImageProxy;
+//import androidx.camera.core.Preview;
+//import androidx.camera.lifecycle.ProcessCameraProvider;
+//import androidx.camera.view.PreviewView;
+//import androidx.core.app.ActivityCompat;
+//import androidx.core.content.ContextCompat;
+//
+//import com.google.common.util.concurrent.ListenableFuture;
+//import com.google.mlkit.vision.common.InputImage;
+//import com.google.mlkit.vision.text.Text;
+//import com.google.mlkit.vision.text.TextRecognition;
+//import com.google.mlkit.vision.text.TextRecognizer;
+//import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+//
+//import java.util.HashMap;
+//import java.util.Map;
+//import java.util.concurrent.ExecutionException;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
+//
+//public class LiveCarNumberDetectionActivity extends AppCompatActivity {
+//
+//    private static final int CAMERA_PERMISSION_REQUEST = 1001;
+//    private PreviewView previewView;
+//    private TextView numberPlateTextView;
+//    private TextRecognizer textRecognizer;
+//    private boolean isProcessingFrame = false;  // Flag to skip frames when processing
+//
+//    // Map for state codes (all Indian states and union territories)
+//    private static final Map<String, String> STATE_MAP = new HashMap<>();
+//    static {
+//        STATE_MAP.put("AP", "Andhra Pradesh");
+//        STATE_MAP.put("AR", "Arunachal Pradesh");
+//        STATE_MAP.put("AS", "Assam");
+//        STATE_MAP.put("BR", "Bihar");
+//        STATE_MAP.put("CG", "Chhattisgarh");
+//        STATE_MAP.put("GA", "Goa");
+//        STATE_MAP.put("GJ", "Gujarat");
+//        STATE_MAP.put("HR", "Haryana");
+//        STATE_MAP.put("HP", "Himachal Pradesh");
+//        STATE_MAP.put("JH", "Jharkhand");
+//        STATE_MAP.put("KA", "Karnataka");
+//        STATE_MAP.put("KL", "Kerala");
+//        STATE_MAP.put("MP", "Madhya Pradesh");
+//        STATE_MAP.put("MH", "Maharashtra");
+//        STATE_MAP.put("MN", "Manipur");
+//        STATE_MAP.put("ML", "Meghalaya");
+//        STATE_MAP.put("MZ", "Mizoram");
+//        STATE_MAP.put("NL", "Nagaland");
+//        STATE_MAP.put("OD", "Odisha");
+//        STATE_MAP.put("PB", "Punjab");
+//        STATE_MAP.put("RJ", "Rajasthan");
+//        STATE_MAP.put("SK", "Sikkim");
+//        STATE_MAP.put("TN", "Tamil Nadu");
+//        STATE_MAP.put("TG", "Telangana");
+//        STATE_MAP.put("TR", "Tripura");
+//        STATE_MAP.put("UP", "Uttar Pradesh");
+//        STATE_MAP.put("UK", "Uttarakhand");
+//        STATE_MAP.put("WB", "West Bengal");
+//
+//        // Union Territories
+//        STATE_MAP.put("AN", "Andaman and Nicobar Islands");
+//        STATE_MAP.put("CH", "Chandigarh");
+//        STATE_MAP.put("DN", "Dadra and Nagar Haveli and Daman and Diu");
+//        STATE_MAP.put("DL", "Delhi");
+//        STATE_MAP.put("JK", "Jammu and Kashmir");
+//        STATE_MAP.put("LA", "Ladakh");
+//        STATE_MAP.put("LD", "Lakshadweep");
+//        STATE_MAP.put("PY", "Puducherry");
+//    }
+//
+//    @Override
+//    protected void onCreate(Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//        setContentView(R.layout.activity_live_car_number_detection);
+//
+//        previewView = findViewById(R.id.previewView);
+//        numberPlateTextView = findViewById(R.id.numberPlateTextView);
+//        textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+//
+//        // Check and request camera permission
+//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+//            startCamera();
+//        } else {
+//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
+//        }
+//    }
+//
+//    private void startCamera() {
+//        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+//        cameraProviderFuture.addListener(() -> {
+//            try {
+//                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+//
+//                // Set up the preview for the camera
+//                Preview preview = new Preview.Builder().build();
+//                preview.setSurfaceProvider(previewView.getSurfaceProvider());
+//
+//                // Select the back camera
+//                CameraSelector cameraSelector = new CameraSelector.Builder()
+//                        .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+//                        .build();
+//
+//                // Set up image analysis with a lower resolution and fast processing strategy
+//                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+//                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)  // Skip old frames
+//                        .setTargetResolution(new android.util.Size(1280, 720))  // Set lower resolution
+//                        .build();
+//
+//                // Set analyzer to process image frames
+//                imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), image -> {
+//                    if (!isProcessingFrame) {
+//                        isProcessingFrame = true;  // Skip frames while processing
+//                        processImage(image);
+//                    }
+//                });
+//
+//                // Bind preview and image analysis to the lifecycle
+//                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
+//
+//            } catch (ExecutionException | InterruptedException e) {
+//                Log.e("CameraX", "Error starting camera", e);
+//            }
+//        }, ContextCompat.getMainExecutor(this));
+//    }
+//
+//    @OptIn(markerClass = ExperimentalGetImage.class)
+//    private void processImage(ImageProxy image) {
+//        // Ensure the image is not null
+//        if (image == null || image.getImage() == null) {
+//            image.close();
+//            isProcessingFrame = false;
+//            return;
+//        }
+//
+//        // Convert ImageProxy to InputImage for ML Kit processing
+//        InputImage inputImage = InputImage.fromMediaImage(image.getImage(), image.getImageInfo().getRotationDegrees());
+//
+//        // Pass image to ML Kit Text Recognition
+//        textRecognizer.process(inputImage)
+//                .addOnSuccessListener(visionText -> {
+//                    String detectedText = extractNumberPlateText(visionText);
+//                    if (!detectedText.isEmpty()) {
+//                        numberPlateTextView.setText(detectedText);  // Display detected text
+//                    }
+//                })
+//                .addOnFailureListener(e -> {
+//                    Log.e("MLKit", "Text recognition failed: " + e.getMessage());
+//                })
+//                .addOnCompleteListener(task -> {
+//                    image.close();  // Close image after processing
+//                    isProcessingFrame = false;  // Ready for the next frame
+//                });
+//    }
+//
+//    // Extract number plate text using regular expression
+//    private String extractNumberPlateText(Text visionText) {
+//        StringBuilder numberPlateText = new StringBuilder();
+//        String regexPattern = "([A-Z]{2}\\d{2}[A-Z]{1,2}\\d{4})";  // Indian number plate pattern
+//        Pattern pattern = Pattern.compile(regexPattern);
+//
+//        for (Text.TextBlock block : visionText.getTextBlocks()) {
+//            String blockText = block.getText();
+//            Matcher matcher = pattern.matcher(blockText);
+//            while (matcher.find()) {
+//                String numberPlate = matcher.group();
+//                numberPlateText.append(formatNumberPlateDetails(numberPlate)).append("\n\n");
+//            }
+//        }
+//        return numberPlateText.toString();
+//    }
+//    // Updated regular expression to accommodate the type of number plate shown in the image
+////    private String extractNumberPlateText(Text visionText) {
+////        StringBuilder numberPlateText = new StringBuilder();
+////
+////        // This regex will allow for a format like "KA 41 ER 4547"
+////        String regexPattern = "([A-Z]{2}\\s?\\d{1,2}\\s?[A-Z]{0,2}\\s?\\d{4})";
+////        Pattern pattern = Pattern.compile(regexPattern);
+////
+////        for (Text.TextBlock block : visionText.getTextBlocks()) {
+////            String blockText = block.getText();
+////            Matcher matcher = pattern.matcher(blockText);
+////            while (matcher.find()) {
+////                String numberPlate = matcher.group();
+////                numberPlateText.append(formatNumberPlateDetails(numberPlate)).append("\n\n");
+////            }
+////        }
+////        return numberPlateText.toString();
+////    }
+//
+//
+//    // Format and display number plate details
+//    private String formatNumberPlateDetails(String numberPlate) {
+//        String stateCode = numberPlate.substring(0, 2);
+//        String state = null;
+//        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+//            state = STATE_MAP.getOrDefault(stateCode, "Unknown State");
+//        }
+//        String vehicleType = identifyVehicleType(numberPlate);
+//
+//        return "Number Plate: " + numberPlate +
+//                "\nState: " + state +
+//                "\nVehicle Type: " + vehicleType;
+//    }
+//
+//    // Identify if the vehicle is a car or bike based on number plate pattern
+//    // Identify if the vehicle is a car or bike based on number plate pattern
+//    private String identifyVehicleType(String numberPlate) {
+//        // Remove any spaces from the number plate for uniform checking
+//        String sanitizedNumberPlate = numberPlate.replaceAll("\\s", "");
+//
+//        // Example number plate format for Cars: KA01AB1234 (total 10 characters)
+//        if (sanitizedNumberPlate.length() == 10 && Character.isLetter(sanitizedNumberPlate.charAt(2)) && Character.isLetter(sanitizedNumberPlate.charAt(3))) {
+//            return "Car";
+//        }
+//        // Example number plate format for Bikes: KA01A1234 (total 9 characters)
+//        else if (sanitizedNumberPlate.length() == 9 && Character.isLetter(sanitizedNumberPlate.charAt(2)) && Character.isDigit(sanitizedNumberPlate.charAt(5))) {
+//            return "Bike";
+//        }
+//        // Additional rule: Commercial vehicles might have other patterns like letters at different positions
+//        else if (sanitizedNumberPlate.matches("[A-Z]{2}\\d{2}[A-Z]{1,2}\\d{4}")) {
+//            return "Commercial Vehicle";
+//        }
+//        // Fallback if none of the patterns match
+//        else {
+//            return "Unknown Vehicle Type";
+//        }
+//    }
+//
+////    private String identifyVehicleType(String numberPlate) {
+////        if (numberPlate.length() == 10 && Character.isLetter(numberPlate.charAt(6))) {
+////            return "Bike";
+////        } else if (numberPlate.length() == 10 && Character.isLetter(numberPlate.charAt(5)) && Character.isLetter(numberPlate.charAt(6))) {
+////            return "Car";
+////        } else {
+////            return "Unknown Vehicle Type";
+////        }
+////    }
+//
+//    // Request camera permission
+//    @Override
+//    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+//        if (requestCode == CAMERA_PERMISSION_REQUEST) {
+//            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//                startCamera();
+//            } else {
+//                Toast.makeText(this, "Camera permission is required", Toast.LENGTH_SHORT).show();
+//            }
+//        }
+//    }
+//}
+
+
+//package com.samyak2403.carnumberplatedetection;
+//
+//import android.os.Bundle;
+//
+//import androidx.activity.EdgeToEdge;
+//import androidx.appcompat.app.AppCompatActivity;
+//import androidx.core.graphics.Insets;
+//import androidx.core.view.ViewCompat;
+//import androidx.core.view.WindowInsetsCompat;
+//
+//import android.Manifest;
+//import android.content.pm.PackageManager;
+//import android.os.Bundle;
+//import android.util.Log;
+//import android.widget.TextView;
+//import android.widget.Toast;
+//
+//import androidx.annotation.NonNull;
+//import androidx.annotation.OptIn;
+//import androidx.appcompat.app.AppCompatActivity;
+//import androidx.camera.core.CameraSelector;
+//import androidx.camera.core.ExperimentalGetImage;
+//import androidx.camera.core.ImageAnalysis;
+//import androidx.camera.core.ImageProxy;
+//import androidx.camera.core.Preview;
+//import androidx.camera.lifecycle.ProcessCameraProvider;
+//import androidx.camera.view.PreviewView;
+//import androidx.core.app.ActivityCompat;
+//import androidx.core.content.ContextCompat;
+//
+//import com.google.common.util.concurrent.ListenableFuture;
+//import com.google.mlkit.vision.common.InputImage;
+//import com.google.mlkit.vision.text.Text;
+//import com.google.mlkit.vision.text.TextRecognition;
+//import com.google.mlkit.vision.text.TextRecognizer;
+//import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+//
+//import java.util.HashMap;
+//import java.util.Map;
+//import java.util.concurrent.ExecutionException;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
+//
+//public class LiveCarNumberDetectionActivity extends AppCompatActivity {
+//
+//    private static final int CAMERA_PERMISSION_REQUEST = 1001;
+//    private PreviewView previewView;
+//    private TextView numberPlateTextView;
+//    private TextRecognizer textRecognizer;
+//
+//    // Map for state codes (you can add more state codes as needed)
+//    private static final Map<String, String> STATE_MAP = new HashMap<>();
+//    static {
+//        STATE_MAP.put("MH", "Maharashtra");
+//        STATE_MAP.put("DL", "Delhi");
+//        STATE_MAP.put("KA", "Karnataka");
+//        // Add more state mappings as necessary
+//    }
+//
+//    @Override
+//    protected void onCreate(Bundle savedInstanceState) {
+//        super.onCreate(savedInstanceState);
+//        setContentView(R.layout.activity_live_car_number_detection);
+//
+//        previewView = findViewById(R.id.previewView);
+//        numberPlateTextView = findViewById(R.id.numberPlateTextView);
+//        textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+//
+//        // Check and request camera permission
+//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+//            startCamera();
+//        } else {
+//            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST);
+//        }
+//    }
+//
+//    private void startCamera() {
+//        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+//        cameraProviderFuture.addListener(() -> {
+//            try {
+//                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+//
+//                // Set up the preview for the camera
+//                Preview preview = new Preview.Builder().build();
+//                preview.setSurfaceProvider(previewView.getSurfaceProvider());
+//
+//                // Select the back camera
+//                CameraSelector cameraSelector = new CameraSelector.Builder()
+//                        .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+//                        .build();
+//
+//                // ImageAnalysis to process each frame
+//                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+//                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+//                        .build();
+//
+//                // Set analyzer to process image frames
+//                imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), image -> processImage(image));
+//
+//                // Bind preview and image analysis to the lifecycle
+//                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
+//
+//            } catch (ExecutionException | InterruptedException e) {
+//                Log.e("CameraX", "Error starting camera", e);
+//            }
+//        }, ContextCompat.getMainExecutor(this));
+//    }
+//
+//    @OptIn(markerClass = ExperimentalGetImage.class)
+//    private void processImage(ImageProxy image) {
+//        // Ensure the image is not null
+//        if (image == null || image.getImage() == null) {
+//            image.close();
+//            return;
+//        }
+//
+//        // Convert ImageProxy to InputImage for ML Kit processing
+//        InputImage inputImage = InputImage.fromMediaImage(image.getImage(), image.getImageInfo().getRotationDegrees());
+//
+//        // Pass image to ML Kit Text Recognition
+//        textRecognizer.process(inputImage)
+//                .addOnSuccessListener(visionText -> {
+//                    String detectedText = extractNumberPlateText(visionText);
+//                    if (!detectedText.isEmpty()) {
+//                        numberPlateTextView.setText(detectedText);  // Display detected text
+//                    }
+//                })
+//                .addOnFailureListener(e -> {
+//                    Log.e("MLKit", "Text recognition failed: " + e.getMessage());
+//                })
+//                .addOnCompleteListener(task -> image.close());  // Close image after processing
+//    }
+//
+//    // Method to extract and filter number plate text
+//    private String extractNumberPlateText(Text visionText) {
+//        StringBuilder numberPlateText = new StringBuilder();
+//
+//        // Regular expression pattern for Indian number plates (e.g., MH09FX6767)
+//        String regexPattern = "([A-Z]{2}\\d{2}[A-Z]{1,2}\\d{4})";
+//        Pattern pattern = Pattern.compile(regexPattern);
+//
+//        for (Text.TextBlock block : visionText.getTextBlocks()) {
+//            String blockText = block.getText();
+//            Matcher matcher = pattern.matcher(blockText);
+//            while (matcher.find()) {
+//                String numberPlate = matcher.group();
+//                numberPlateText.append(formatNumberPlateDetails(numberPlate)).append("\n");
+//            }
+//        }
+//        return numberPlateText.toString();
+//    }
+//
+//    // Method to format and identify details of the number plate
+//    private String formatNumberPlateDetails(String numberPlate) {
+//        String stateCode = numberPlate.substring(0, 2);
+//        String state = null;
+//        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+//            state = STATE_MAP.getOrDefault(stateCode, "Unknown State");
+//        }
+//        String vehicleType = identifyVehicleType(numberPlate);
+//
+//        return "Number Plate: " + numberPlate +
+//                "\nState: " + state +
+//                "\nVehicle Type: " + vehicleType;
+//    }
+//
+//    // Method to identify if the number plate is for a car or bike based on common formats
+//    private String identifyVehicleType(String numberPlate) {
+//        // Example logic (can be expanded)
+//        // Assuming number plates with single letter between digits (e.g., "MH09F1234") are bikes
+//        // and number plates with two letters (e.g., "MH09FX1234") are cars
+//        if (numberPlate.length() == 10 && Character.isLetter(numberPlate.charAt(6))) {
+//            return "Bike";
+//        } else if (numberPlate.length() == 10 && Character.isLetter(numberPlate.charAt(5)) && Character.isLetter(numberPlate.charAt(6))) {
+//            return "Car";
+//        } else {
+//            return "Unknown Vehicle Type";
+//        }
+//    }
+//
+//    // Request camera permission
+//    @Override
+//    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+//        if (requestCode == CAMERA_PERMISSION_REQUEST) {
+//            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//                startCamera();
+//            } else {
+//                Toast.makeText(this, "Camera permission is required", Toast.LENGTH_SHORT).show();
+//            }
+//        }
+//    }
+//}

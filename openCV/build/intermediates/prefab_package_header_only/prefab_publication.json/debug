@@ -1,0 +1,17 @@
+{
+  "installationFolder": "C:\\Users\\Samya\\AndroidStudioProjects\\CarNumberPlateDetection\\openCV\\build\\intermediates\\prefab_package\\debug\\prefab",
+  "gradlePath": ":openCV",
+  "packageInfo": {
+    "packageName": "openCV",
+    "packageSchemaVersion": 2,
+    "packageDependencies": [],
+    "modules": [
+      {
+        "moduleName": "opencv_jni_shared",
+        "moduleHeaders": "C:\\Users\\Samya\\AndroidStudioProjects\\CarNumberPlateDetection\\openCV\\native\\jni\\include",
+        "moduleExportLibraries": [],
+        "abis": []
+      }
+    ]
+  }
+}

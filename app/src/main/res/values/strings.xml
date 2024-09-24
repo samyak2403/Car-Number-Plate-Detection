@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Car Number Plate Detection</string>
+    <string name="mlkit">
+    This app leverages the power of ML Kit to detect vehicle number plates in real-time.\n
+    Our goal is to provide a seamless image processing experience to our users.\n\n
+
+</string>
+
+
+</resources>
