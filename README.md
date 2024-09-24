@@ -105,7 +105,7 @@ Contributions are welcome! Please fork the repository and submit a pull request.
 This project is licensed under the MIT License. 📄
 
 ## 📞 Contact
-For any inquiries or support, please contact [your-email@example.com](arrowwouldpro.com). 📧
+For any inquiries or support, please contact [samyak kamble](arrowwouldpro.com). 📧
 
 ## 🙏 Acknowledgments
 - Google ML Kit Team for providing the powerful text recognition API.
