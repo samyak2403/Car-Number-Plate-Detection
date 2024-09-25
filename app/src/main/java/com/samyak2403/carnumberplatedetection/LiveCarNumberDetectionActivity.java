@@ -26,6 +26,7 @@ import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+import com.sk365.messagelibrary.ToastMessage;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -264,6 +265,9 @@ public class LiveCarNumberDetectionActivity extends AppCompatActivity {
             startCamera();
         } else {
             Toast.makeText(this, "Camera permission denied", Toast.LENGTH_LONG).show();
+            // Using the library to show a toast message
+
+
         }
     }
 }

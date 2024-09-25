@@ -25,6 +25,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CarNumberPlateDetection"
         tools:targetApi="31">
+
+        <activity android:name=".web.GithubWebActivity"
+            android:exported="false"/>
+
+        <activity android:name=".LicenseActivity"
+            android:exported="false"/>
+
         <activity
             android:name=".UploadImageNumberPlateActivity"
             android:exported="false" />

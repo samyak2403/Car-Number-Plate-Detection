@@ -1,10 +1,10 @@
 <resources>
     <string name="app_name">Car Number Plate Detection</string>
-    <string name="mlkit">
-    This app leverages the power of ML Kit to detect vehicle number plates in real-time.\n
-    Our goal is to provide a seamless image processing experience to our users.\n\n
-
-</string>
+    <string name="mlkit">This app leverages the power of ML Kit to detect vehicle number plates in real-time.\n
+    Our goal is to provide a seamless image processing experience to our users.</string>
+    <string name="license">This project is licensed under the MIT License.</string>
+    <string name="samyak_github">This app is developed by Samyak2403 with 5 years of experience in Android development and Kotlin mastery</string>
+    <string name="made_with_for_samyak2403">Made with ❤ for Samyak2403</string>
 
 
 </resources>

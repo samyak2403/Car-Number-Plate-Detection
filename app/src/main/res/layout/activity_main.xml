@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -8,196 +7,334 @@
     android:orientation="vertical"
     tools:context=".MainActivity">
 
-    <!-- Toolbar for the app with title -->
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/colorAccent"
-        android:elevation="4dp"
-        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
-        <TextView
-            android:id="@+id/toolbar_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🔍 Number plate Detection"
-            android:textColor="@android:color/white"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:layout_gravity="center"
-            android:gravity="center"/>
-    </androidx.appcompat.widget.Toolbar>
-
-
-    <!-- MaterialCardView for number detection -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="5dp"
-        android:gravity="center"
-        android:orientation="horizontal">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/liveCarNumber"
-            android:layout_width="130dp"
-            android:layout_height="150dp"
-            android:layout_margin="10dp"
-            app:cardElevation="5dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+        <!-- Toolbar for the app with title -->
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorAccent"
+            android:elevation="4dp"
+            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+
+            <TextView
+                android:id="@+id/toolbar_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
                 android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="94dp"
-                    android:layout_height="94dp"
-                    android:padding="15dp"
-                    android:src="@drawable/photo" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="10dp"
-                    android:background="@color/lightGray" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:padding="5dp"
-                    android:text="Number Detection"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-        </com.google.android.material.card.MaterialCardView>
+                android:text="🔍 Number plate Detection"
+                android:textColor="@android:color/white"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+        </androidx.appcompat.widget.Toolbar>
 
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/addGalleryImage"
-            android:layout_width="130dp"
-            android:layout_height="150dp"
-            android:layout_margin="10dp"
-            app:cardElevation="5dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="94dp"
-                    android:layout_height="94dp"
-
-                    android:padding="15dp"
-                    android:src="@drawable/galleryx" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="10dp"
-                    android:background="@color/lightGray" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:padding="5dp"
-                    android:text="Uplooad Image"
-                    android:textColor="@color/textColor"
-                    android:textStyle="bold" />
-
-
-            </LinearLayout>
-
-        </com.google.android.material.card.MaterialCardView>
-
-
-
-        <!-- Additional card views can be added here -->
-
-    </LinearLayout>
-
-
-    <!-- TextView to display detected number plate text -->
-    <TextView
-        android:id="@+id/numberPlateTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="🚗 Number plate text will appear here 🚗"
-        android:textSize="18sp"
-        android:textColor="@android:color/white"
-        android:background="@android:color/black"
-        android:padding="8dp"
-        android:layout_gravity="center"/>
-
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="10dp">
-
+        <!-- MaterialCardView for number detection -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
+            android:layout_margin="5dp"
+            android:gravity="center"
+            android:orientation="horizontal">
 
-            android:padding="16dp">
-
-            <!-- ImageView for logo -->
-            <ImageView
-                android:id="@+id/logoImage"
-                android:layout_width="150dp"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/liveCarNumber"
+                android:layout_width="130dp"
                 android:layout_height="150dp"
-                android:layout_gravity="center"
                 android:layout_margin="10dp"
-                android:src="@drawable/hero" />
+                app:cardElevation="5dp">
 
-            <!-- TextView for 20-line Project Information -->
-            <TextView
-                android:id="@+id/mlkit_description"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/mlkit"
-                android:textSize="16sp"
-                android:textColor="@android:color/black"
-                android:padding="16dp"
-                android:textStyle="bold"
-                android:lineSpacingExtra="4dp"
-                android:textAlignment="center" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/developerInfoTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center"
-                android:text="This app is developed by Samyak2403 with 5 years of experience in Android development and Kotlin mastery"
-                android:textColor="@android:color/black"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_gravity="center_horizontal" />
+                    <ImageView
+                        android:layout_width="94dp"
+                        android:layout_height="94dp"
+                        android:padding="15dp"
+                        android:src="@drawable/photo" />
 
-            <!-- TextView for GitHub profile -->
-            <TextView
-                android:id="@+id/githubLink"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="GitHub Profile: samyak2403"
-                android:textColor="@color/linkColor"
-                android:textSize="16sp"
-                android:textAlignment="center"
-                android:layout_marginTop="20dp"
-                android:layout_gravity="center"
-                android:autoLink="web"
-                android:linksClickable="true" />
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@color/lightGray" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:padding="5dp"
+                        android:text="Number Detection"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/addGalleryImage"
+                android:layout_width="130dp"
+                android:layout_height="150dp"
+                android:layout_margin="10dp"
+                app:cardElevation="5dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:layout_width="94dp"
+                        android:layout_height="94dp"
+
+                        android:padding="15dp"
+                        android:src="@drawable/galleryx" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@color/lightGray" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:padding="5dp"
+                        android:text="Uplooad Image"
+                        android:textColor="@color/textColor"
+                        android:textStyle="bold" />
+
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+
+            <!-- Additional card views can be added here -->
+
         </LinearLayout>
-    </ScrollView>
 
 
+        <!-- TextView to display detected number plate text -->
+        <TextView
+            android:id="@+id/numberPlateTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+
+            android:background="@drawable/background_rounded_small_2"
+            android:padding="8dp"
+            android:text="🚗 Number plate text will appear here 🚗"
+            android:textColor="@android:color/white"
+            android:textSize="18sp" />
 
 
-</LinearLayout>
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+
+                <RelativeLayout
+                    android:id="@+id/mlkit"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="20dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/more_bg_rounded_top"
+                    android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_toLeftOf="@+id/end1"
+                        android:orientation="vertical"
+                        android:padding="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🌐ML KIT"
+                            android:textColor="@color/black"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/mlkit"
+                            android:textColor="@android:color/tertiary_text_dark" />
+                    </LinearLayout>
+
+                    <FrameLayout
+                        android:id="@+id/end1"
+                        android:layout_width="75dp"
+                        android:layout_height="55dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="12dp"
+                        android:layout_marginRight="2dp"
+                        android:background="@drawable/background_rounded_small"
+                        android:backgroundTint="@android:color/transparent">
+
+                        <ImageView
+                            android:layout_width="50dp"
+                            android:layout_height="50dp"
+                            android:layout_gravity="center"
+                            android:background="@drawable/circle_bg"
+                            android:backgroundTint="@android:color/system_accent1_200"
+                            android:padding="10dp"
+                            android:src="@drawable/hero" />
+                    </FrameLayout>
+                </RelativeLayout>
+
+
+                <RelativeLayout
+                    android:id="@+id/mr_samyakkamble"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="20dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/more_bg_rounded_top"
+                    android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_toLeftOf="@+id/end2"
+                        android:orientation="vertical"
+                        android:padding="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🚀GITHUB"
+                            android:textColor="@color/black"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/samyak_github"
+                            android:textColor="@android:color/tertiary_text_dark" />
+                    </LinearLayout>
+
+                    <FrameLayout
+                        android:id="@+id/end2"
+                        android:layout_width="75dp"
+                        android:layout_height="55dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="12dp"
+                        android:layout_marginRight="2dp"
+                        android:background="@drawable/background_rounded_small"
+                        android:backgroundTint="@android:color/transparent">
+
+                        <ImageView
+                            android:layout_width="50dp"
+                            android:layout_height="50dp"
+                            android:layout_gravity="center"
+                            android:background="@drawable/circle_bg"
+                            android:backgroundTint="@android:color/system_accent1_200"
+                            android:padding="10dp"
+                            android:src="@drawable/github" />
+                    </FrameLayout>
+                </RelativeLayout>
+
+
+                <RelativeLayout
+                    android:id="@+id/license"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="20dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/more_bg_rounded_top"
+                    android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_toLeftOf="@+id/end3"
+                        android:orientation="vertical"
+                        android:padding="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📝LICENSE"
+                            android:textColor="@color/black"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/license"
+                            android:textColor="@android:color/tertiary_text_dark" />
+                    </LinearLayout>
+
+                    <FrameLayout
+                        android:id="@+id/end3"
+                        android:layout_width="75dp"
+                        android:layout_height="55dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="12dp"
+                        android:layout_marginRight="2dp"
+                        android:background="@drawable/background_rounded_small"
+                        android:backgroundTint="@android:color/transparent">
+
+                        <ImageView
+                            android:layout_width="50dp"
+                            android:layout_height="50dp"
+                            android:layout_gravity="center"
+                            android:background="@drawable/circle_bg"
+                            android:backgroundTint="@android:color/system_accent1_200"
+                            android:padding="10dp"
+                            android:src="@drawable/beta" />
+                    </FrameLayout>
+                </RelativeLayout>
+
+            </LinearLayout>
+
+
+        </ScrollView>
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="30dp"
+            android:text="@string/made_with_for_samyak2403"
+            android:textColor="@android:color/darker_gray"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/versionName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="50dp"
+            android:text="version: 1.0"
+            android:textColor="@android:color/darker_gray"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
