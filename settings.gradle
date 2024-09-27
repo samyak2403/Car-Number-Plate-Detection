@@ -10,6 +10,7 @@ pluginManagement {
         mavenCentral()
         jcenter() // May still be required for older dependencies
         gradlePluginPortal()
+        maven { url 'https://www.jitpack.io' }
     }
 }
 dependencyResolutionManagement {
