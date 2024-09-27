@@ -3,7 +3,6 @@ package com.samyak2403.carnumberplatedetection;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -18,6 +17,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         createNotificationChannel();
 
         // Check for app updates
-        checkForUpdates(getAppVersion(), "CarNumberPlateDetection");
+        checkForUpdates(getAppVersion(), "CarNumber-Plate-Detection");
     }
 
     private void initViews() {
@@ -119,8 +119,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                     if (!currentVersion.equals(latestVersion)) {
                         runOnUiThread(() -> {
-                            showUpdateDialog(latestVersion);
-                            sendUpdateNotification(latestVersion);
+                            showUpdateDialog(latestVersion, repoName);
+                            sendUpdateNotification(latestVersion, repoName);
                         });
                     } else {
                         Log.i(TAG, "App is up to date. Current version: " + currentVersion);
@@ -132,13 +132,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
-    private void showUpdateDialog(String latestVersion) {
+    private void showUpdateDialog(String latestVersion, String repoName) {
         new AlertDialog.Builder(this)
                 .setTitle("New Version Available")
                 .setMessage("A new version (" + latestVersion + ") is available. Please update to get the latest features and bug fixes.")
                 .setPositiveButton("Update", (dialog, which) -> {
                     Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.setData(Uri.parse("https://github.com/samyak2403/car-number-plate-detection/releases/latest"));
+                    intent.setData(Uri.parse("https://github.com/samyak2403/" + repoName + "/releases/latest"));
                     startActivity(intent);
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
@@ -158,12 +158,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private void sendUpdateNotification(String latestVersion) {
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/samyak2403/car-number-plate-detection/releases/latest"));
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+    private void sendUpdateNotification(String latestVersion, String repoName) {
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/samyak2403/" + repoName + "/releases/latest"));
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_update)  // Make sure to add a relevant icon in your drawable resources
+                .setSmallIcon(R.drawable.ic_update)
                 .setContentTitle("New Version Available")
                 .setContentText("Version " + latestVersion + " is now available. Tap to update.")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -171,6 +171,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 .setAutoCancel(true);
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1);
+            return;
+        }
+
         notificationManager.notify(1, builder.build());
     }
 
