@@ -60,6 +60,7 @@ dependencies {
     implementation 'com.github.samyak2403:ToastMessage:1.0'
 
     //App Update
+
     // OkHttp dependency
     implementation 'com.squareup.okhttp3:okhttp:4.9.3'
     // Gson for parsing JSON
